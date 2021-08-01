@@ -2,7 +2,6 @@
 #include "shellcode.h"
 
 bool is_32_bit;
-int modcount;
 DWORD pid;
 uintptr_t base;
 HANDLE prochandle;
@@ -58,7 +57,6 @@ uintptr_t get_base(const char* modname, DWORD pid) {
 			IsWow64Process(prochandle, (PBOOL)&is_32_bit);
 		}
 		status = Module32Next(hSnap, &me32);
-		modcount++;
 	}
 	CloseHandle(hSnap);
 	return base_buffer;
