@@ -28,17 +28,20 @@ bool LoadDLL(const char* path, uintptr_t* copy, size_t* size) {
 
 
 int main() {
+
+
+
 	uintptr_t base; size_t size;
-	if (!LoadDLL("C:\\Users\\weak\\Desktop\\CSGOSimple-master\\bin\\Release\\csgosimple.dll", &base, &size)) {
+	if (!LoadDLL("C:\\Users\\weak\\Desktop\\old projects\\OldStuff\\Helloworld\\x64\\Release\\Helloworld.dll", &base, &size)) {
 		printf("Couldn't load dll\n");
 		goto END;
 	}
-	if (!ModExMap::attach("csgo.exe")) {
+	if (!ModExMap::attach("PortalWars-Win64-Shipping.exe")) {
 		printf("Couldn't attach to proc\n");
 		goto END;
 	}
 		
-	if (!ModExMap::map_dll((char*)base, size))
+	if (!ModExMap::map_dll((char*)base, size, true, true))
 	{
 		printf("Couldn't map dll\n");
 		goto END;
