@@ -2,6 +2,7 @@
 #include "shellcode.h"
 
 bool is_32_bit;
+int modcount;
 DWORD pid;
 uintptr_t base;
 HANDLE prochandle;
@@ -57,6 +58,7 @@ uintptr_t get_base(const char* modname, DWORD pid) {
 			IsWow64Process(prochandle, (PBOOL)&is_32_bit);
 		}
 		status = Module32Next(hSnap, &me32);
+		modcount++;
 	}
 	CloseHandle(hSnap);
 	return base_buffer;
@@ -293,7 +295,7 @@ struct injectiondata {
 	T getprocaddress;
 	T dll;
 };
-bool ModExMap::map_dll(char* img, size_t disksize) {
+bool ModExMap::map_dll(char* img, size_t disksize,bool wait_for_dllreturn, bool erasepeheader) {
 	PIMAGE_DOS_HEADER dos = (PIMAGE_DOS_HEADER)img;
 	DWORD shellcodesize = is_32_bit ? sizeof(shellcode32) : sizeof(shellcode64);
 	PIMAGE_NT_HEADERS32 nt32 = (PIMAGE_NT_HEADERS32)(img + dos->e_lfanew);
@@ -330,12 +332,23 @@ bool ModExMap::map_dll(char* img, size_t disksize) {
 	HANDLE ThreadHandle = CreateRemoteThread(prochandle, 0, 0, (LPTHREAD_START_ROUTINE)(remote_base + totalsize - 0x1000), (LPVOID)remote_base, 0, 0);
 	CloseHandle(ThreadHandle);
 
-	DWORD offset = is_32_bit ? 0x8 : 0x10;
-	while (!read<DWORD>(remote_base + offset))
-		Sleep(1000); //Wait for hdll to be set
+	if (wait_for_dllreturn) {
+		DWORD offset = is_32_bit ? 0x8 : 0x10;
+		while (!read<DWORD>(remote_base + offset)) {
+			Sleep(1000); //Wait for hdll to be set
+		}
+	}
+	else
+	{
+		Sleep(5000);
+	}
 	char buffer[0x1000];
 	memset(buffer, 0, 0x1000);
-	WriteProcessMemory(prochandle, (LPVOID)remote_base, buffer, sizeof(buffer), 0);
+	if (erasepeheader) {
+		WriteProcessMemory(prochandle, (LPVOID)remote_base, buffer, sizeof(buffer), 0);
+	}
+	
+	WriteProcessMemory(prochandle, (LPVOID)(remote_base + totalsize - 0x1000), buffer, shellcodesize, 0);
 	CloseHandle(prochandle);
 	free(img);
 	return true;
